@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedLLM — Avances de Investigación</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME
+   =========================================== */
+:root{
+  --stage-bg:#0c0d0e;
+  --slide-bg:#101214;
+  --bg-soft:#16181b;
+  --ink:#e8e6e1;
+  --ink-2:#a3a099;
+  --ink-3:#6b6963;
+  --accent:#e4a853;
+  --accent-dim:rgba(228,168,83,.14);
+  --line:#2a2c2f;
+  --serif:'Instrument Serif',serif;
+  --sans:'Instrument Sans',sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   viewport-base.css (full) — fixed 16:9 stage
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   SLIDE SYSTEM
+   =========================================== */
+.slide{font-family:var(--sans);color:var(--ink);background:var(--slide-bg);padding:80px 120px;display:flex;flex-direction:column;justify-content:center}
+.atmosphere{position:absolute;inset:0;pointer-events:none;background:radial-gradient(900px 500px at 85% 12%,var(--accent-dim),transparent 60%),radial-gradient(700px 600px at 8% 95%,rgba(228,168,83,.06),transparent 60%)}
+.kicker{font-size:15px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:var(--ink-3);margin-bottom:36px;display:flex;align-items:center;gap:14px}
+.kicker::before{content:'';width:34px;height:2px;background:var(--accent)}
+h1{font-family:var(--serif);font-weight:400;font-size:88px;line-height:1.06;letter-spacing:-1px}
+h1 em{font-style:italic;color:var(--accent)}
+h2{font-family:var(--serif);font-weight:400;font-size:64px;line-height:1.1}
+p.lead{margin-top:32px;font-size:27px;line-height:1.5;color:var(--ink-2);max-width:1350px}
+.foot{position:absolute;bottom:56px;left:120px;right:120px;display:flex;justify-content:space-between;font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink-3)}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.slide.active .reveal{opacity:1;transform:none}
+.slide.active .reveal:nth-child(2){transition-delay:.1s}
+.slide.active .reveal:nth-child(3){transition-delay:.2s}
+.slide.active .reveal:nth-child(4){transition-delay:.3s}
+.slide.active .reveal:nth-child(5){transition-delay:.4s}
+.slide.active .reveal:nth-child(6){transition-delay:.5s}
+
+/* accent number */
+.bignum{font-family:var(--serif);font-size:200px;line-height:1;color:var(--accent);opacity:.9}
+
+/* timeline */
+.timeline{margin-top:56px;position:relative;padding-left:56px;border-left:1px solid var(--line)}
+.tl-item{position:relative;margin-bottom:34px}
+.tl-item::before{content:'';position:absolute;left:-61px;top:8px;width:11px;height:11px;border-radius:50%;background:var(--accent)}
+.tl-item .when{font-size:14px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.tl-item h3{font-family:var(--serif);font-weight:400;font-size:32px;margin-bottom:4px}
+.tl-item p{font-size:19px;color:var(--ink-2);line-height:1.45}
+
+/* pipeline */
+.pipeline{display:flex;gap:0;margin-top:64px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.phase{flex:1;padding:30px 28px;border-left:1px solid var(--line)}
+.phase:first-child{border-left:none}
+.phase .n{font-family:var(--serif);font-size:44px;color:var(--ink-3)}
+.phase.done .n{color:var(--accent)}
+.phase.now .n{color:var(--accent);font-style:italic}
+.phase h4{font-size:20px;font-weight:600;margin:10px 0 6px}
+.phase p{font-size:15px;color:var(--ink-2);line-height:1.5}
+.phase.now{background:var(--bg-soft)}
+
+/* cards */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--line);border:1px solid var(--line);margin-top:56px}
+.card{background:var(--slide-bg);padding:36px 40px}
+.card h4{font-family:var(--serif);font-weight:400;font-size:30px;margin-bottom:10px}
+.card h4 i{color:var(--accent);font-style:italic}
+.card p{font-size:18px;color:var(--ink-2);line-height:1.5}
+
+/* metrics row */
+.metrics{display:flex;gap:64px;margin-top:64px}
+.metric .v{font-family:var(--serif);font-size:88px;line-height:1;color:var(--accent)}
+.metric .l{margin-top:14px;font-size:16px;color:var(--ink-2);letter-spacing:1px;text-transform:uppercase;line-height:1.5}
+
+/* status list */
+.status{margin-top:48px}
+.status li{list-style:none;padding:18px 0;border-bottom:1px solid var(--line);font-size:23px;color:var(--ink-2);display:flex;gap:18px;align-items:baseline}
+.status li::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--accent);flex-shrink:0;transform:translateY(-2px)}
+.status li b{color:var(--ink);font-weight:600}
+
+/* steps */
+.steps{margin-top:52px;counter-reset:s}
+.step{display:flex;gap:40px;padding:26px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.step .n{font-family:var(--serif);font-size:52px;color:var(--accent);min-width:70px}
+.step h4{font-size:24px;font-weight:600}
+.step p{font-size:18px;color:var(--ink-2);margin-top:6px;line-height:1.5}
+
+/* title slide */
+.title-slide h1{font-size:112px}
+.title-slide .toprow{display:flex;justify-content:space-between;font-size:14px;letter-spacing:3px;text-transform:uppercase;color:var(--ink-3);margin-bottom:80px}
+.title-slide .toprow i{width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:12px;vertical-align:1px}
+
+.pager{position:fixed;right:36px;bottom:26px;color:#777;font-family:var(--sans);font-size:13px;letter-spacing:2px;z-index:1000}
+.progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);width:0;transition:width .4s var(--ease);z-index:1001}
+
+body.editing .slide.active [data-e]{outline:1px dashed var(--accent);outline-offset:4px;cursor:text}
+
+@media (max-width:700px){.deck-controls .hint{display:none}}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- 1 · PORTADA -->
+<section class="slide title-slide active">
+  <div class="atmosphere"></div>
+  <div class="toprow reveal"><span><i></i>MedLLM · Proyecto Final de Grado</span><span>Octubre 2026</span></div>
+  <h1 class="reveal">Fine-tuning de LLMs<br>aplicado <em>a la salud</em></h1>
+  <p class="lead reveal">Avances de investigación, estado actual y próximos pasos del proyecto.</p>
+  <div class="foot reveal"><span>Enzo Izquierdo Díaz · Manuel Graña Machado</span><span>ORT · Universal · Urudata</span></div>
+</section>
+
+<!-- 2 · PROPÓSITO -->
+<section class="slide">
+  <div class="atmosphere"></div>
+  <div class="kicker reveal">01 · Propósito</div>
+  <h2 class="reveal">Convertir un modelo generalista en uno que hable el <em>idioma clínico</em></h2>
+  <p class="lead reveal">Los LLMs de propósito general no conocen los protocolos ni la terminología local. El proyecto investiga cómo adaptarlos —mediante fine-tuning eficiente— a un caso de uso concreto del ámbito hospitalario.</p>
+  <div class="foot"><span>MedLLM</span></div>
+</section>
+
+<!-- 3 · CASO DE USO -->
+<section class="slide">
+  <div class="atmosphere"></div>
+  <div class="kicker reveal">02 · Caso de Uso</div>
+  <h2 class="reveal">Extracción de antecedentes <em>cardiovasculares</em></h2>
+  <p class="lead reveal">Universal necesita calcular scores de riesgo cardiovascular. Hoy esos antecedentes viven en texto narrativo libre: notas y evoluciones que ningún médico estructura manualmente. Nuestro modelo extrae entidades clínicas desde ese texto.</p>
+  <div class="foot"><span>MedLLM</span></div>
+</section>
+
+<!-- 4 · PIPELINE -->
+<section class="slide">
+  <div class="atmosphere"></div>
+  <div class="kicker reveal">03 · Metodología</div>
+  <h2 class="reveal">Dónde estamos en el <em>pipeline</em></h2>
+  <p class="lead reveal">Flujo de ingeniería de adaptación de LLMs a salud (Google Health AI Developer Foundations), definido en el anteproyecto.</p>
+  <div class="pipeline reveal">
+    <div class="phase done"><div class="n">1</div><h4>Caso clínico</h4><p>Extracción CVS definida y aprobada. Mayo 2026.</p></div>
+    <div class="phase done"><div class="n">2</div><h4>Modelos base</h4><p>Gemma 4 31B-IT y Qwen 3.6-27B en H100.</p></div>
+    <div class="phase done"><div class="n">3</div><h4>Métricas</h4><p>MUC-5 adaptado + desglose SPU + LLM-judge.</p></div>
+    <div class="phase done"><div class="n">4</div><h4>Benchmark</h4><p>24 configuraciones en CaseReportBench EN/ES.</p></div>
+    <div class="phase now"><div class="n">5</div><h4>Fine-tuning final</h4><p>Ajuste con datos reales de Universal. <b>Hoy.</b></p></div>
+  </div>
+  <div class="foot"><span>MedLLM</span></div>
+</section>
+
+<!-- 5 · RECORRIDO -->
+<section class="slide">
+  <div class="atmosphere"></div>
+  <div class="kicker reveal">04 · Recorrido</div>
+  <h2 class="reveal">Marzo → <em>Octubre 2026</em></h2>
+  <div class="timeline reveal">
+    <div class="tl-item"><div class="when">Abril</div><h3>Exploración</h3><p>Viabilidad de casos de uso, entorno Urudata y catálogo NGC.</p></div>
+    <div class="tl-item"><div class="when">Mayo</div><h3>Definición del caso</h3><p>Extracción de antecedentes clínicos + CaseReportBench como benchmark.</p></div>
+    <div class="tl-item"><div class="when">Junio</div><h3>Dataset</h3><p>Subconjunto cardiovascular (CVS), gold standard curado, versión ES.</p></div>
+    <div class="tl-item"><div class="when">Julio</div><h3>Evaluación</h3><p>Adopción de MUC-5, desglose SPU-I/SPU-A, LLM-as-a-judge.</p></div>
+    <div class="tl-item"><div class="when">Agosto</div><h3>Resultados</h3><p>24 experimentos en H100; eje de embeddings calibrado.</p></div>
+    <div class="tl-item"><div class="when">Septiembre</div><h3>Exploraciones</h3><p>Métricas más baratas que LLM as a judge.</p></div>
+  </div>
+  <div class="foot"><span>MedLLM</span></div>
+</section>
+
+<!-- 6 · EVALUACIÓN -->
+<section class="slide">
+  <div class="atmosphere"></div>
+  <div class="kicker reveal">05 · Evaluación</div>
+  <h2 class="reveal">MUC-5, pero con <em>taxonomía clínica</em></h2>
+  <div class="cards reveal">
+    <div class="card"><h4>COR / PAR / INC / MIS</h4><p>El estándar MUC-5 clasifica cada hallazgo extraído: correcto, parcial, incorrecto u omitido.</p></div>
+    <div class="card"><h4>SPU-I <i>vs</i> SPU-A</h4><p>Separamos espurios por irrelevancia de especialidad (SPU-I) de alucinaciones puras (SPU-A).</p></div>
+    <div class="card"><h4>LLM-as-a-Judge</h4><p>Juez semántico automatizado (GLM-5.2 / Gemini) para evaluar cientos de extracciones.</p></div>
+    <div class="card"><h4>Eje embeddings</h4><p>Matching 1-a-1 por coseno con umbral θ=0.867 — proxy gratuito y determinista.</p></div>
+  </div>
+  <div class="foot"><span>MedLLM</span></div>
+</section>
+
+<!-- 7 · HALLAZGOS -->
+<section class="slide">
+  <div class="atmosphere"></div>
+  <div class="kicker reveal">06 · Hallazgos</div>
+  <h2 class="reveal">24 experimentos en H100: <em>qué aprendimos</em></h2>
+  <div class="metrics reveal">
+    <div class="metric"><div class="v">0</div><div class="l">alucinaciones clínicas (SPU-A = 0)</div></div>
+    <div class="metric"><div class="v">69.2%</div><div class="l">F1 en español (baseline Qwen)</div></div>
+    <div class="metric"><div class="v">0.947</div><div class="l">Concordancia del eje embeddings</div></div>
+    <div class="metric"><div class="v">83%</div><div class="l">precisión con QLoRA / DoRA</div></div>
+  </div>
+  <p class="lead reveal" style="margin-top:48px">El trade-off de fine-tuning: sube precisión y especificidad, pero vuelve al modelo hiper-selectivo (↓ recall). La cuantización 4-bit degrada; la H100 en FP16 lo resuelve.</p>
+</section>
+
+<!-- 8 · ESTADO ACTUAL -->
+<section class="slide">
+  <div class="atmosphere"></div>
+  <div class="kicker reveal">07 · Estado Actual</div>
+  <h2 class="reveal">Todo listo, esperando los <em>datos</em></h2>
+  <ul class="status reveal">
+    <li><b>Infraestructura</b> — H100 NVL 94GB en Urudata, pipelines QLoRA/DoRA validados</li>
+    <li><b>Evaluación</b> — suite MUC-5 + LLM-judge + embeddings operativa</li>
+    <li><b>Bloqueo externo</b> — entrega del dataset anonimizado de historias clínicas por Universal</li>
+  </ul>
+  <div class="foot"><span>MedLLM</span></div>
+</section>
+
+<!-- 9 · PRÓXIMOS PASOS -->
+<section class="slide">
+  <div class="atmosphere"></div>
+  <div class="kicker reveal">08 · Próximos Pasos</div>
+  <h2 class="reveal">De los datos a la <em>defensa</em></h2>
+  <p class="lead reveal">En cuanto lleguen los datos: auditoría, fine-tuning, validación con médicos y defensa.</p>
+  <div class="foot"><span>MedLLM</span></div>
+</section>
+
+<!-- 10 · CIERRE -->
+<section class="slide title-slide">
+  <div class="atmosphere"></div>
+  <div class="kicker reveal">09 · Cierre</div>
+  <h1 class="reveal">Gracias.<br><em>¿Preguntas?</em></h1>
+  <p class="lead reveal">El cuello de botella no es técnico: es la entrega de datos. Apenas lleguen, Fase 5 arranca sin setup.</p>
+  <div class="foot reveal"><span>Enzo Izquierdo Díaz · Manuel Graña Machado</span></div>
+</section>
+
+</main>
+</div>
+<div class="pager" id="pager">1 / 10</div>
+
+<script>
+/* ===========================================
+   CONTROLLER
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+
+const slides = [...document.querySelectorAll('.slide')];
+const pager = document.getElementById('pager');
+const progress = document.getElementById('progress');
+let i = 0;
+function show(n){
+  i = Math.max(0, Math.min(n, slides.length-1));
+  slides.forEach((s,k)=>{ s.classList.toggle('active',k===i); s.classList.toggle('visible',k===i); });
+  pager.textContent = `${i+1} / ${slides.length}`;
+  progress.style.width = `${((i+1)/slides.length)*100}%`;
+}
+addEventListener('keydown', e=>{
+  if(['ArrowRight',' ','PageDown'].includes(e.key)) show(i+1);
+  if(['ArrowLeft','PageUp'].includes(e.key)) show(i-1);
+  if(e.key==='Home') show(0);
+  if(e.key==='End') show(slides.length-1);
+  if(e.key==='e'||e.key==='E'){ document.body.classList.toggle('editing'); document.querySelectorAll('[data-e]').forEach(el=>el.contentEditable = document.body.classList.contains('editing')); }
+});
+document.addEventListener('click', e=>{
+  if(document.body.classList.contains('editing')) return;
+  if(e.clientX > innerWidth*0.7) show(i+1); else if(e.clientX < innerWidth*0.3) show(i-1);
+});
+let x0=null;
+addEventListener('touchstart', e=>x0=e.touches[0].clientX);
+addEventListener('touchend', e=>{ if(x0==null)return; const dx=e.changedTouches[0].clientX-x0; if(dx<-50)show(i+1); if(dx>50)show(i-1); x0=null; });
+show(0);
+</script>
+</body>
+</html>
